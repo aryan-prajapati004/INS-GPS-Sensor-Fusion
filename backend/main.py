@@ -640,6 +640,15 @@ def simulate(req: SimulateRequest):
     with periodic GT reset to prevent drift, compute errors."""
     raw, gt_PN_all, gt_PE_all, dt_all = _load_dataset(req.dataset)
 
+    # DOWNSAMPLE for Render Free Tier: Limit to first 2500 rows
+    # This ensures the 0.1 CPU core can process the request in ~5 seconds.
+    MAX_ROWS = 2500
+    if len(raw) > MAX_ROWS:
+        raw = raw[:MAX_ROWS]
+        gt_PN_all = gt_PN_all[:MAX_ROWS]
+        gt_PE_all = gt_PE_all[:MAX_ROWS]
+        dt_all = dt_all[:MAX_ROWS]
+
     # Build sliding windows
     windows: List[list] = []
     gt_pn: List[float] = []
