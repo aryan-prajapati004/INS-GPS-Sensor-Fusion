@@ -1,0 +1,28 @@
+services:
+  # ── Backend: FastAPI inference API (Docker) ──────────────────────────
+  - type: web
+    name: ins-gps-fusion-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: ARTIFACT_DIR
+        value: /app/artifacts
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # ── Frontend: static dashboard ───────────────────────────────────────
+  - type: web
+    name: ins-gps-fusion-dashboard
+    runtime: static
+    staticPublishPath: ./frontend
+    plan: free
+    envVars:
+      - key: API_BASE_URL
+        value: https://ins-gps-fusion-api.onrender.com
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

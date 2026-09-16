@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INS+GPS Trajectory Fusion — Deep Learning Sensor Dashboard</title>
+<meta name="description" content="Compare 12 deep learning INS/GPS trajectory fusion models in real time with animated visualization and full analytics.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Dark theme ──────────────────────────────────────────────── */
+html[data-theme='dark'] {
+  --bg-base:         #08090e;
+  --bg-surface:      rgba(255,255,255,0.025);
+  --bg-surface-h:    rgba(255,255,255,0.05);
+  --bg-elevated:     rgba(255,255,255,0.04);
+  --bg-input:        rgba(0,0,0,0.3);
+  --bg-glass:        rgba(10,12,22,0.72);
+  --border:          rgba(255,255,255,0.07);
+  --border-h:        rgba(255,255,255,0.14);
+  --border-active:   rgba(59,130,246,0.35);
+  --text-primary:    #eef0f5;
+  --text-secondary:  #8892a4;
+  --text-tertiary:   #475569;
+  --plot-bg:         #0b0c15;
+  --plot-grid:       rgba(255,255,255,0.04);
+  --plot-axis:       rgba(255,255,255,0.1);
+  --plot-tick:       #536070;
+  --plot-title:      #c4ccda;
+  --plot-legend-bg:  rgba(11,12,21,0.92);
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:       0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg:       0 8px 32px rgba(0,0,0,0.5);
+  --scrollbar:       rgba(255,255,255,0.08);
+  --glow-blue:       rgba(59,130,246,0.12);
+  --glow-indigo:     rgba(99,102,241,0.08);
+}
+
+/* ── Light theme ─────────────────────────────────────────────── */
+html[data-theme='light'] {
+  --bg-base:         #f4f5f7;
+  --bg-surface:      rgba(255,255,255,0.8);
+  --bg-surface-h:    rgba(255,255,255,0.95);
+  --bg-elevated:     rgba(255,255,255,0.9);
+  --bg-input:        rgba(0,0,0,0.04);
+  --bg-glass:        rgba(255,255,255,0.65);
+  --border:          rgba(0,0,0,0.08);
+  --border-h:        rgba(0,0,0,0.15);
+  --border-active:   rgba(59,130,246,0.4);
+  --text-primary:    #111827;
+  --text-secondary:  #4b5563;
+  --text-tertiary:   #9ca3af;
+  --plot-bg:         #ffffff;
+  --plot-grid:       rgba(0,0,0,0.06);
+  --plot-axis:       rgba(0,0,0,0.15);
+  --plot-tick:       #6b7280;
+  --plot-title:      #1f2937;
+  --plot-legend-bg:  rgba(255,255,255,0.96);
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:       0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:       0 8px 32px rgba(0,0,0,0.1);
+  --scrollbar:       rgba(0,0,0,0.12);
+  --glow-blue:       rgba(59,130,246,0.08);
+  --glow-indigo:     rgba(99,102,241,0.06);
+}
+
+/* ── Shared design tokens ────────────────────────────────────── */
+:root {
+  --accent:        #3b82f6;
+  --accent-dim:    rgba(59,130,246,0.12);
+  --accent-glow:   rgba(59,130,246,0.22);
+  --accent-vivid:  #6366f1;
+  --success:       #10b981;
+  --success-dim:   rgba(16,185,129,0.12);
+  --danger:        #ef4444;
+  --danger-dim:    rgba(239,68,68,0.12);
+  --warning:       #f59e0b;
+  --warning-dim:   rgba(245,158,11,0.12);
+  --font:          'Inter', -apple-system, system-ui, sans-serif;
+  --mono:          'JetBrains Mono', 'Fira Code', monospace;
+  --r:             8px;
+  --r-lg:          12px;
+  --r-xl:          16px;
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:   cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast:        0.15s;
+  --t-med:         0.28s;
+  --t-slow:        0.45s;
+}
+
+/* ── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { transition: color-scheme var(--t-med); }
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--t-med) var(--ease-smooth),
+              color var(--t-med) var(--ease-smooth);
+}
+
+/* Gradient accent bar at top */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-vivid), var(--accent));
+  background-size: 200% 100%;
+  z-index: 9999;
+  animation: accentShift 6s linear infinite;
+}
+@keyframes accentShift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Ambient glows (dark only) */
+html[data-theme='dark'] body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow-blue), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-h); }
+
+/* ── Shell ───────────────────────────────────────────────────── */
+.shell {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 18px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-wrap: wrap;
+  transition: border-color var(--t-med);
+}
+
+.brand { display: flex; flex-direction: column; gap: 3px; }
+
+.brand-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 100px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  backdrop-filter: blur(12px);
+  transition: all var(--t-med);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: all var(--t-med);
+}
+.status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse-dot 2s ease-in-out infinite; }
+.status-dot.error  { background: var(--danger);  box-shadow: 0 0 8px var(--danger); }
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+/* Theme toggle */
+.theme-toggle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--t-med);
+}
+.theme-toggle:hover {
+  border-color: var(--border-h);
+  background: var(--bg-surface-h);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.theme-toggle svg { transition: transform var(--t-slow) var(--ease-spring); }
+.theme-toggle:active svg { transform: rotate(30deg); }
+
+/* ── Metrics strip ───────────────────────────────────────────── */
+.metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 900px) { .metrics-strip { grid-template-columns: repeat(2,1fr); } }
+
+.metric-card {
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--card-accent, var(--accent));
+  border-radius: var(--r);
+  transition: background var(--t-med), border-color var(--t-med), transform var(--t-fast);
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--card-accent, var(--accent)), transparent 70%);
+  opacity: 0.03;
+  pointer-events: none;
+}
+.metric-card:hover { transform: translateY(-1px); border-color: var(--border-h); }
+
+.metric-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.metric-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+.value-pop { animation: valuePop 0.3s var(--ease-spring); }
+@keyframes valuePop {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 3-column layout ─────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 340px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+/* ── Card ────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(10px);
+  transition: background var(--t-med), border-color var(--t-med);
+}
+.card:hover { border-color: var(--border-h); }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.card-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-input);
+  padding: 2px 7px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+}
+
+.card-body { padding: 14px; }
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  overflow: hidden;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 11px 12px;
+  font: 500 12px var(--font);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--t-med);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text-secondary); background: var(--bg-surface-h); }
+.tab-btn.active { color: var(--accent); font-weight: 600; }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 15%; width: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-vivid));
+  border-radius: 2px 2px 0 0;
+  animation: tabSlide 0.3s var(--ease-smooth);
+}
+@keyframes tabSlide {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.tab-panel { display: none; animation: panelIn 0.3s var(--ease-smooth); }
+.tab-panel.active { display: block; }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Left panel: model list ──────────────────────────────────── */
+.left-panel { display: flex; flex-direction: column; }
+
+.search-wrap {
+  position: relative;
+  margin-bottom: 9px;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+.search-box {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text-primary);
+  font: 13px var(--font);
+  outline: none;
+  transition: border-color var(--t-med), box-shadow var(--t-med);
+}
+.search-box::placeholder { color: var(--text-tertiary); }
+.search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+.toolbar-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.toolbar-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.toolbar-row label:hover { border-color: var(--border-h); background: var(--bg-surface-h); }
+.toolbar-row label input { accent-color: var(--accent); width: 12px; height: 12px; }
+
+.btn-sm {
+  padding: 4px 9px;
+  font: 500 11px var(--font);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.btn-sm:hover { background: var(--bg-surface-h); border-color: var(--border-h); color: var(--text-primary); }
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--t-fast);
+  position: relative;
+  opacity: 0;
+  animation: chipIn 0.25s var(--ease-smooth) forwards;
+}
+.chip::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--swatch, var(--text-tertiary));
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.chip:hover { background: var(--bg-surface-h); transform: translateX(2px); }
+.chip.active { background: var(--bg-elevated); border-color: var(--border); }
+.chip.active::before { opacity: 1; }
+.chip.disabled { opacity: 0.3 !important; cursor: default; animation: none; }
+.chip.disabled:hover { background: transparent; transform: none; }
+
+@keyframes chipIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.chip-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--swatch, var(--text-tertiary));
+  flex-shrink: 0;
+  transition: box-shadow var(--t-med);
+}
+.chip.active .chip-dot { box-shadow: 0 0 7px 1px var(--swatch, var(--accent)); }
+
+.chip-name { font-size: 12px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-info { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
+.chip-ade  { font-family: var(--mono); font-size: 10px; color: var(--text-secondary); }
+.chip-params { font-family: var(--mono); font-size: 9px; color: var(--text-tertiary); }
+
+.list-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 0 2px;
+}
+
+/* ── Center panel ────────────────────────────────────────────── */
+.center-stack { display: flex; flex-direction: column; }
+
+.plot-wrap {
+  position: relative;
+  background: var(--plot-bg);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: background var(--t-med);
+}
+
+#trajectoryPlot { width: 100%; height: 510px; }
+#errorPlot      { width: 100%; height: 250px; }
+#resultTrajPlot { width: 100%; height: 460px; }
+#resultErrPlot  { width: 100%; height: 230px; }
+
+/* Placeholders */
+.plot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-tertiary);
+  user-select: none;
+  background: var(--bg-surface);
+}
+.plot-placeholder.traj { min-height: 380px; }
+.plot-placeholder.err  { min-height: 150px; }
+.plot-placeholder.hidden { display: none; }
+
+.ph-icon { opacity: 0.45; animation: floatIcon 3s ease-in-out infinite; }
+@keyframes floatIcon {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.ph-title { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+.ph-desc { font-size: 12px; line-height: 1.6; max-width: 340px; }
+.ph-steps { display: flex; gap: 20px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+.ph-step { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
+.ph-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Loading overlay */
+.plot-loading {
+  display: none;
+  position: absolute; inset: 0;
+  background: var(--bg-glass);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-radius: var(--r);
+}
+.plot-loading.active { display: flex; }
+.spinner {
+  width: 32px; height: 32px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Animation progress bar */
+.anim-progress-wrap { padding: 0 14px; display: none; }
+.anim-progress-wrap.active { display: block; }
+.anim-progress-bar {
+  height: 3px;
+  background: var(--bg-input);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+.anim-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-vivid));
+  border-radius: 2px;
+  transition: width 0.12s linear;
+  box-shadow: 0 0 8px var(--accent-dim);
+}
+
+/* Controls bar */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+select {
+  font: 13px var(--font);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 7px 11px;
+  border-radius: var(--r);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--t-med);
+  max-width: 210px;
+}
+select option { background: var(--bg-base); }
+select:focus { border-color: var(--accent); }
+
+.btn {
+  font: 500 13px var(--font);
+  padding: 7px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--t-med);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-surface-h); border-color: var(--border-h); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-vivid);
+  border-color: var(--accent-vivid);
+  box-shadow: 0 3px 12px var(--accent-glow);
+}
+.btn-primary.pulse { animation: btnPulse 2s ease-in-out infinite; }
+@keyframes btnPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  50%      { box-shadow: 0 0 0 6px rgba(59,130,246,0.15); }
+}
+
+.upload-btn { cursor: pointer; }
+.upload-btn input[type="file"] { display: none; }
+
+/* Speed control */
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+.speed-control input[type="range"] {
+  width: 64px; height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.speed-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-base);
+  cursor: pointer;
+  transition: transform var(--t-fast);
+}
+.speed-control input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.progress-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* Error section (live) */
+.error-section { padding: 0 14px 12px; }
+.error-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-top: 10px;
+}
+.error-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.error-metrics {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: right;
+  max-width: 65%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Results tab */
+.results-grid { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.result-plot-wrapper {
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--plot-bg);
+  transition: background var(--t-med), border-color var(--t-med);
+}
+.results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+.results-empty svg { opacity: 0.35; }
+
+/* ── Right panel ─────────────────────────────────────────────── */
+
+/* Overview tab */
+.overview-wrap { padding: 14px; }
+
+.selection-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg-elevated);
+  padding: 9px 11px;
+  margin-bottom: 5px;
+  transition: all var(--t-fast);
+}
+.selection-card:hover { border-color: var(--border-h); }
+.selection-card strong { font-size: 12px; }
+.selection-card span { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); }
+
+.selection-empty { color: var(--text-tertiary); font-size: 12px; line-height: 1.6; }
+
+.live-metrics-cards { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; }
+
+.live-metric-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg-elevated);
+  transition: all var(--t-fast);
+  animation: panelIn 0.3s var(--ease-smooth);
+}
+.live-metric-card:hover { border-color: var(--border-h); }
+.lmc-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.lmc-row { display: flex; gap: 12px; font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); flex-wrap: wrap; }
+
+/* Leaderboard tab */
+.lb-wrap { padding: 12px 14px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 5px 5px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+td {
+  padding: 7px 5px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  transition: background var(--t-fast);
+}
+html[data-theme='dark'] td { border-bottom-color: rgba(255,255,255,0.025); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-surface-h); }
+
+.rank { font-family: var(--mono); color: var(--text-tertiary); width: 22px; }
+.ade-cell { font-family: var(--mono); }
+.meta-cell { font-family: var(--mono); color: var(--text-tertiary); font-size: 11px; }
+.model-cell { display: flex; flex-direction: column; gap: 1px; }
+.model-cell small { font-family: var(--mono); font-size: 9px; color: var(--text-tertiary); }
+.bar-cell { width: 70px; }
+.bar-track { height: 3px; background: var(--bg-input); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s var(--ease-smooth); }
+.leaderboard-footer { margin-top: 10px; font-size: 10px; color: var(--text-tertiary); line-height: 1.5; }
+
+/* Downloads tab */
+.downloads-wrap { padding: 14px; }
+.dl-section { margin-bottom: 16px; }
+.dl-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dl-btn {
+  width: 100%;
+  padding: 9px 12px;
+  font: 500 12px var(--font);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--t-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.dl-btn:hover { background: var(--bg-surface-h); border-color: var(--border-h); color: var(--text-primary); transform: translateX(2px); }
+.dl-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+.dl-btn .dl-text { flex: 1; }
+.dl-btn .dl-hint { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); }
+
+.error-summary-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+.error-summary-table th { font-size: 9px; padding: 4px 4px 6px; }
+.error-summary-table td { padding: 5px 4px; font-family: var(--mono); font-size: 11px; }
+.error-summary-table .model-name-cell { font-family: var(--font); font-weight: 500; }
+
+.dl-empty { color: var(--text-tertiary); font-size: 12px; text-align: center; padding: 22px 8px; line-height: 1.6; }
+.empty-state { color: var(--text-tertiary); font-size: 12px; text-align: center; padding: 30px 10px; }
+
+/* ── Toast notifications ──────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  z-index: 10000;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 12px 16px;
+  border-radius: var(--r);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.4s var(--ease-spring);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+}
+.toast.out { animation: toastOut 0.3s var(--ease-smooth) forwards; }
+.toast-icon { flex-shrink: 0; }
+.toast.success .toast-icon { color: var(--success); }
+.toast.error   .toast-icon { color: var(--danger); }
+.toast.info    .toast-icon { color: var(--accent); }
+@keyframes toastIn  { from { opacity:0; transform: translateY(14px) scale(0.95); } to { opacity:1; transform: none; } }
+@keyframes toastOut { to   { opacity:0; transform: translateY(8px) scale(0.95); } }
+
+/* ── Global animations ───────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.metrics-strip { animation: fadeUp 0.4s var(--ease-smooth) both; }
+/* ── Validation Modal ────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.25s ease;
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  max-width: 560px;
+  width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s var(--ease-spring);
+}
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.modal-icon.success { background: rgba(34,197,94,0.15); color: var(--success); }
+.modal-icon.error   { background: rgba(239,68,68,0.15); color: var(--danger); }
+.modal-icon.warning { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all var(--t-fast);
+}
+.modal-close:hover { background: var(--bg-surface-h); color: var(--text-primary); }
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+
+.modal-footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Validation report items */
+.vr-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.vr-stat {
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.vr-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin-bottom: 3px;
+}
+.vr-stat-value {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.vr-stat-value.ok { color: var(--success); }
+.vr-stat-value.bad { color: var(--danger); }
+
+.vr-section {
+  margin-bottom: 12px;
+}
+.vr-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vr-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r);
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.vr-issue.error   { background: rgba(239,68,68,0.08); border-left: 3px solid var(--danger); }
+.vr-issue.warning { background: rgba(245,158,11,0.08); border-left: 3px solid var(--warning); }
+.vr-issue.info    { background: rgba(59,130,246,0.08); border-left: 3px solid var(--accent); }
+
+.vr-issue-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.vr-issue.error .vr-issue-icon   { color: var(--danger); }
+.vr-issue.warning .vr-issue-icon { color: var(--warning); }
+.vr-issue.info .vr-issue-icon    { color: var(--accent); }
+
+.vr-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.vr-col-tag {
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-family: var(--mono);
+}
+.vr-col-tag.present { background: rgba(34,197,94,0.12); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+.vr-col-tag.missing { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+
+.vr-cleaning {
+  padding: 6px 10px;
+  border-radius: var(--r);
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.15);
+  font-size: 11px;
+  color: var(--success);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vr-col-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.vr-col-stats th {
+  text-align: left;
+  font-size: 9px;
+  padding: 4px 6px 6px;
+}
+.vr-col-stats td {
+  padding: 5px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="brand">
+    <div class="brand-tag">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Deep Learning · Sensor Fusion
+    </div>
+    <h1>INS+GPS Trajectory Fusion</h1>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">connecting…</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme (D)">
+      <!-- icon set by JS -->
+    </button>
+  </div>
+</header>
+
+<!-- Metrics strip -->
+<section class="metrics-strip">
+  <div class="metric-card" style="--card-accent: var(--accent)">
+    <div class="metric-label">Backend</div>
+    <div class="metric-value" id="backendState">—</div>
+    <div class="metric-sub" id="backendMeta">Checking artifacts…</div>
+  </div>
+  <div class="metric-card" style="--card-accent: var(--success)">
+    <div class="metric-label">Loaded Models</div>
+    <div class="metric-value" id="loadedStat">0</div>
+    <div class="metric-sub" id="loadedMeta">Ready for inference.</div>
+  </div>
+  <div class="metric-card" style="--card-accent: var(--warning)">
+    <div class="metric-label">Selected</div>
+    <div class="metric-value" id="selectedStat">0</div>
+    <div class="metric-sub" id="selectedMeta">Choose models to compare.</div>
+  </div>
+  <div class="metric-card" style="--card-accent: var(--accent-vivid)">
+    <div class="metric-label">Best ADE</div>
+    <div class="metric-value" id="bestAdeStat">—</div>
+    <div class="metric-sub" id="bestAdeMeta">From leaderboard.</div>
+  </div>
+</section>
+
+<div class="layout">
+
+  <!-- LEFT: Models -->
+  <div class="card left-panel">
+    <div class="card-header">
+      <span class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93A10 10 0 0 1 19.07 19.07"/></svg>
+        Models
+      </span>
+      <span class="card-badge" id="modelCount">0/12</span>
+    </div>
+    <div class="card-body">
+      <div class="search-wrap">
+        <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="modelSearch" class="search-box" type="search" placeholder="Search models…" autocomplete="off">
+      </div>
+      <div class="toolbar-row">
+        <label title="Show only loaded models"><input type="checkbox" id="loadedOnlyToggle"> Loaded</label>
+        <button class="btn-sm" id="selectLoadedBtn" title="Select all loaded models">All loaded</button>
+        <button class="btn-sm" id="selectTopBtn" title="Select top 3 by ADE">Top 3</button>
+        <button class="btn-sm" id="clearSelectionBtn" title="Clear selection">Clear</button>
+      </div>
+      <div class="model-list" id="modelList"></div>
+      <div class="list-hint" id="modelHint">Click a model to select it.</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Live View | Results -->
+  <div class="card center-stack">
+    <div class="tab-bar" id="centerTabs">
+      <button class="tab-btn active" data-tab="liveView">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Live View
+      </button>
+      <button class="tab-btn" data-tab="results">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        Results
+      </button>
+    </div>
+
+    <!-- Live View -->
+    <div class="tab-panel active" id="panel-liveView">
+      <div class="plot-wrap" id="trajWrapper">
+        <div class="plot-placeholder traj" id="trajPlaceholder">
+          <div class="ph-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7L9 3L5 7l4 4"/><path d="m17 11 4 4-4 4-4-4"/><path d="m8 12 4 4"/><path d="m12 8 4 4"/><circle cx="12" cy="12" r="2"/><path d="M4.93 19.07A10 10 0 0 1 2 12C2 6.48 6.48 2 12 2"/><path d="M19.07 4.93A10 10 0 0 1 22 12c0 5.52-4.48 10-10 10"/></svg>
+          </div>
+          <div class="ph-title">AUV Trajectory Comparison</div>
+          <div class="ph-desc">Compare deep learning models against ground truth on real sensor data. Select models, choose a dataset, then run.</div>
+          <div class="ph-steps">
+            <div class="ph-step"><span class="ph-num">1</span>Select models ←</div>
+            <div class="ph-step"><span class="ph-num">2</span>Pick dataset ↓</div>
+            <div class="ph-step"><span class="ph-num">3</span>Run Simulation ▶</div>
+          </div>
+        </div>
+        <div id="trajectoryPlot" style="display:none;"></div>
+        <div class="plot-loading" id="trajLoading">
+          <div class="spinner"></div>
+          Running inference… this may take a moment.
+        </div>
+      </div>
+
+      <div class="anim-progress-wrap" id="animProgressWrap">
+        <div class="anim-progress-bar">
+          <div class="anim-progress-fill" id="animProgressFill"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <select id="datasetSelect"><option value="">Loading datasets…</option></select>
+        <label class="btn upload-btn" title="Upload a CSV dataset">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload CSV
+          <input type="file" id="csvUpload" accept=".csv">
+        </label>
+        <button class="btn btn-primary" id="runDemoBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run Simulation
+        </button>
+        <button class="btn" id="clearBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Clear
+        </button>
+        <div class="speed-control">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Speed
+          <input type="range" id="animSpeed" min="1" max="10" value="4" title="Animation speed (1=slow, 10=fast)">
+        </div>
+        <span class="progress-text" id="progressText"></span>
+      </div>
+
+      <div class="error-section">
+        <div class="error-header">
+          <span class="error-title">Position Error</span>
+          <span class="error-metrics" id="liveMetricsText">ADE: — | FDE: —</span>
+        </div>
+        <div class="plot-wrap" id="errWrapper">
+          <div class="plot-placeholder err" id="errPlaceholder">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <div class="ph-desc" style="font-size:11px;">Position error will appear here after simulation.</div>
+          </div>
+          <div id="errorPlot" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results tab -->
+    <div class="tab-panel" id="panel-results">
+      <div class="results-grid">
+        <div class="results-empty" id="resultsEmpty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          <div style="font-size:13px;">Run a simulation to see interactive results here.</div>
+        </div>
+        <div class="result-plot-wrapper" id="resultTrajWrapper" style="display:none;">
+          <div id="resultTrajPlot"></div>
+        </div>
+        <div class="result-plot-wrapper" id="resultErrWrapper" style="display:none;">
+          <div id="resultErrPlot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Overview | Leaderboard | Downloads -->
+  <div class="card">
+    <div class="tab-bar" id="rightTabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+      <button class="tab-btn" data-tab="downloads">Downloads</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="tab-panel active" id="panel-overview">
+      <div class="overview-wrap">
+        <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Selection</div>
+        <div id="selectionSummary">
+          <div class="selection-empty">Select models from the left panel to compare their trajectories.</div>
+        </div>
+        <div class="live-metrics-cards" id="liveMetricsCards"></div>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="tab-panel" id="panel-leaderboard">
+      <div class="lb-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="rank">#</th>
+              <th>Model</th>
+              <th>ADE</th>
+              <th>Params</th>
+              <th>Train</th>
+              <th class="bar-cell"></th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <tr><td colspan="6"><div class="empty-state">Waiting for backend…</div></td></tr>
+          </tbody>
+        </table>
+        <div class="leaderboard-footer">ADE = Average Displacement Error on held-out test windows. Lower is better.</div>
+      </div>
+    </div>
+
+    <!-- Downloads -->
+    <div class="tab-panel" id="panel-downloads">
+      <div class="downloads-wrap">
+        <div class="dl-section">
+          <div class="dl-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Data
+          </div>
+          <button class="dl-btn" id="dlTrajCsv" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="dl-text">Trajectory CSV</span>
+            <span class="dl-hint">GT + predictions</span>
+          </button>
+          <button class="dl-btn" id="dlErrorCsv" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="dl-text">Error Data CSV</span>
+            <span class="dl-hint">per-window errors</span>
+          </button>
+        </div>
+        <div class="dl-section">
+          <div class="dl-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Export Plots
+          </div>
+          <button class="dl-btn" id="dlTrajPng" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span class="dl-text">Trajectory Plot PNG</span>
+            <span class="dl-hint">high-res</span>
+          </button>
+          <button class="dl-btn" id="dlErrPng" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span class="dl-text">Error Plot PNG</span>
+            <span class="dl-hint">high-res</span>
+          </button>
+        </div>
+        <div class="dl-section">
+          <div class="dl-section-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Error Summary
+          </div>
+          <div id="errorSummaryContent">
+            <div class="dl-empty">Run a simulation to see error metrics.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .layout -->
+
+<!-- Validation Report Modal -->
+<div class="modal-overlay" id="validationModal" style="display:none;">
+  <div class="modal-content validation-modal">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <span class="modal-icon" id="validationIcon"></span>
+        <h3 class="modal-title" id="validationTitle">Dataset Validation Report</h3>
+      </div>
+      <button class="modal-close" id="validationClose" title="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="validationBody"></div>
+    <div class="modal-footer">
+      <button class="btn" id="validationOkBtn">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+</div><!-- .shell -->
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
