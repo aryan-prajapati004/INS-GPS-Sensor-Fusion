@@ -4,7 +4,7 @@ services:
     name: ins-gps-fusion-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerContext: .
     plan: free
     envVars:
       - key: ARTIFACT_DIR

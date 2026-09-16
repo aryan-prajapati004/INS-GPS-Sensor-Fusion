@@ -7,19 +7,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CPU-only torch first (the default PyPI wheel pulls in ~2GB of
-# CUDA libraries that are useless on Render and will blow the free-tier
-# disk/RAM budget). The CPU wheel is ~200MB.
+# Install CPU-only torch first
 RUN pip install --no-cache-dir torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY models.py main.py ./
-# Trained model artifacts (.pkl files) — see README for how to get these
-# from your training notebook onto Render (Git LFS, object storage, or
-# baked directly into the image).
-COPY artifacts/ ./artifacts/
+COPY backend/models.py backend/main.py ./
+COPY backend/artifacts/ ./artifacts/
+
+# Copy the default dataset so main.py (which looks in ../data) can find it at /data
+COPY data/v1.csv /data/v1.csv
 
 ENV ARTIFACT_DIR=/app/artifacts
 ENV PORT=8000
