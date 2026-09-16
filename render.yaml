@@ -17,7 +17,6 @@ services:
     name: ins-gps-fusion-dashboard
     runtime: static
     staticPublishPath: ./frontend
-    plan: free
     envVars:
       - key: API_BASE_URL
         value: https://ins-gps-fusion-api.onrender.com
