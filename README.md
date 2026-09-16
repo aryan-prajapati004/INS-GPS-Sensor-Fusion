@@ -1,6 +1,12 @@
 # INS/GPS Trajectory Fusion
 
+[![Live Deployment](https://img.shields.io/badge/Live_Dashboard-Available_Now-success?style=for-the-badge)](https://ins-gps-fusion-dashboard.onrender.com)
+[![API Status](https://img.shields.io/badge/Backend_API-Online-success?style=for-the-badge)](https://ins-gps-fusion-api.onrender.com/health)
+
 A full-stack deep learning system for sensor fusion, designed to predict autonomous vehicle (AUV/UAV) trajectories using IMU, GPS, and vehicle state data.
+
+![Dashboard Preview](assets/preview.png)
+*(Note: To display the preview above, take a screenshot of your live dashboard, save it as `preview.png` inside an `assets` folder in this repo.)*
 
 This repository features **12 distinct neural network architectures**—ranging from classic recurrent networks to state-of-the-art state-space models—all optimized for CPU inference and visualized through a modern, interactive dashboard.
 
